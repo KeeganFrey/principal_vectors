@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Principal vector networks — an explainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=Dosis:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- KaTeX for math rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
+<style>
+:root{
+  /* bluish-grey palette — cool slate, harmonizes with the blue accent */
+  --bg:        #d9dee6;
+  --surface:   #eef1f5;
+  --surface-2: #e1e6ee;
+  --ink:       #191c23;
+  --ink-soft:  #434a57;
+  --muted:     #79808d;
+  --line:      #c3ccd7;
+  --line-2:    #aab4c2;
+
+  --accent:     oklch(0.55 0.16 255);
+  --accent-2:   oklch(0.55 0.16 255 / 0.14);
+  --accent-ink: #ffffff;
+
+  --reveal-dur:  560ms;
+  --reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --soft-ease:   cubic-bezier(0.22, 0.61, 0.31, 1.05);
+
+  --maxread: 720px;
+}
+
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"Dosis", "IBM Plex Sans", system-ui, sans-serif;
+  font-size:18px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{ background:var(--accent); color:var(--accent-ink); }
+
+.mono{
+  font-family:"IBM Plex Mono", ui-monospace, monospace;
+  font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted);
+}
+
+/* ---------------- article ---------------- */
+.article{ max-width:var(--maxread); margin:0 auto; padding:84px 32px 200px; }
+.eyebrow{ margin-bottom:18px; }
+.article h1.title{
+  font-family:"Source Serif 4", Georgia, serif; font-weight:500;
+  font-size:clamp(34px, 4.6vw, 54px); line-height:1.08; letter-spacing:-0.015em;
+  margin:0 0 22px; text-wrap:balance;
+}
+.lede{
+  font-family:"Source Serif 4", Georgia, serif;
+  font-size:21px; line-height:1.55; color:var(--ink-soft); margin:0 0 36px;
+}
+.article p{ margin:0 0 22px; text-wrap:pretty; }
+.article h2{
+  font-family:"Space Grotesk", "Dosis", system-ui, sans-serif; font-weight:600;
+  font-size:28px; margin:54px 0 16px; letter-spacing:-0.02em;
+  scroll-margin-top:84px;
+}
+.article h2 .h2-ix{
+  font-family:"IBM Plex Mono", monospace; font-size:13px; font-weight:500;
+  color:var(--accent); margin-right:12px; letter-spacing:0; vertical-align:2px;
+}
+.byline{ display:flex; gap:14px; align-items:center; margin-bottom:16px; }
+.byline .rule{ flex:1; height:1px; background:var(--line); }
+
+/* ---------------- author line ---------------- */
+.authorline{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  margin-bottom:40px;
+  font-family:"IBM Plex Sans", system-ui, sans-serif;
+  font-size:14px; color:var(--ink-soft);
+}
+.authorline .by{ color:var(--muted); }
+.author{
+  position:relative; display:inline-flex; align-items:center; gap:6px;
+  font-weight:600; color:var(--ink);
+  border-bottom:1px dashed var(--line-2); cursor:help;
+}
+.author:focus{ outline:none; }
+.author .ico{ width:6px; height:6px; border-radius:50%; background:var(--accent); flex:none; }
+/* contact card */
+.author .contact{
+  position:absolute; left:0; top:calc(100% + 12px); z-index:70;
+  width:248px; max-width:72vw;
+  background:var(--surface); color:var(--ink);
+  border:1px solid var(--line-2); border-radius:11px;
+  box-shadow:0 18px 40px -16px rgba(0,0,0,.5);
+  padding:14px 15px; text-align:left;
+  opacity:0; transform:translateY(6px); pointer-events:none;
+  transition:opacity .16s ease, transform .18s var(--soft-ease);
+}
+.author:hover .contact, .author:focus .contact{
+  opacity:1; transform:translateY(0); pointer-events:auto;
+}
+.author .contact .cname{ font-weight:600; font-size:14px; margin-bottom:2px; }
+.author .contact .crole{
+  font-family:"IBM Plex Mono", monospace; font-size:10px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted); margin-bottom:11px;
+}
+.author .contact a{
+  display:flex; align-items:center; gap:9px;
+  font-size:13px; color:var(--ink-soft); text-decoration:none;
+  padding:5px 0; font-weight:400;
+}
+.author .contact a:hover{ color:var(--accent); }
+.author .contact a svg{ width:14px; height:14px; flex:none; opacity:.7; }
+.author .contact a:hover svg{ opacity:1; }
+
+/* ---------------- figures ---------------- */
+figure.fig{
+  margin:34px 0 38px;
+  padding:18px 18px 14px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--surface);
+  opacity:0; transform:translateY(14px);
+  transition:opacity .7s var(--soft-ease), transform .7s var(--soft-ease);
+}
+figure.fig.in{ opacity:1; transform:none; }
+figure.fig .chart-host{ width:100%; }
+figure.fig figcaption{
+  font-family:"IBM Plex Sans", system-ui, sans-serif;
+  font-size:13.5px; line-height:1.5; color:var(--ink-soft);
+  margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);
+}
+figure.fig figcaption b{
+  font-family:"IBM Plex Mono", monospace;
+  font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--accent); margin-right:8px; font-weight:600;
+}
+
+.method-card{
+  margin:30px 0 38px;
+  padding:22px 24px;
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:12px;
+}
+.method-card .ml{
+  font-family:"IBM Plex Mono", monospace; font-size:11px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--muted); margin-bottom:10px;
+}
+.method-card .placeholder{
+  height:220px; border-radius:8px;
+  background:
+    repeating-linear-gradient(135deg, transparent 0 14px, rgba(0,0,0,.04) 14px 15px),
+    var(--surface);
+  display:grid; place-items:center;
+  color:var(--muted); font-family:"IBM Plex Mono", monospace; font-size:12px;
+  border:1px dashed var(--line-2);
+}
+.method-card .schematic{
+  display:block; width:100%; height:auto; border-radius:8px;
+  background:#fff; padding:14px 10px; border:1px solid var(--line);
+}
+.method-card .mcap{
+  font-family:"IBM Plex Sans", system-ui, sans-serif;
+  font-size:13.5px; line-height:1.5; color:var(--ink-soft);
+  margin-top:12px; padding-top:10px; border-top:1px dashed var(--line);
+}
+
+/* reconstructed first-layer principal vectors */
+.recon-fig{ margin:30px 0 38px; }
+.recon-pair{
+  display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:0;
+}
+.recon-item{ margin:0; }
+.recon-pair img{
+  display:block; width:100%; height:auto; border-radius:8px;
+  background:#3a3a3a; border:1px solid var(--line);
+  image-rendering:auto;
+}
+.recon-label{
+  display:block;
+  font-family:"IBM Plex Mono", monospace; font-size:11px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--muted); margin-top:8px; text-align:center;
+}
+.recon-fig figcaption{
+  font-family:"IBM Plex Sans", system-ui, sans-serif;
+  font-size:13.5px; line-height:1.5; color:var(--ink-soft);
+  margin-top:14px; padding-top:10px; border-top:1px dashed var(--line);
+}
+@media (max-width:560px){ .recon-pair{ grid-template-columns:1fr; } }
+
+.appendix{
+  margin-top:60px; padding:22px 24px;
+  background:var(--surface);
+  border:1px solid var(--line); border-radius:12px;
+  font-family:"IBM Plex Mono", monospace; font-size:13px; line-height:1.7;
+  color:var(--ink-soft);
+}
+.appendix h3{
+  font-family:"Source Serif 4", serif; font-weight:600; font-size:18px;
+  margin:0 0 12px; color:var(--ink);
+}
+.appendix code{ color:var(--ink); }
+
+/* ---------------- colophon ---------------- */
+.colophon{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  margin-top:40px; padding-top:22px; border-top:1px solid var(--line);
+  font-family:"IBM Plex Sans", system-ui, sans-serif;
+  font-size:13px; color:var(--muted);
+}
+.colophon .cstar{
+  width:16px; height:16px; flex:none; color:var(--accent);
+}
+.colophon a{ color:var(--ink-soft); text-decoration:none; border-bottom:1px solid var(--line-2); }
+.colophon a:hover{ color:var(--accent); border-bottom-color:var(--accent); }
+
+/* ---------------- floating trigger ---------------- */
+#floatBtn{
+  position:fixed; right:26px; bottom:26px; z-index:45;
+  display:flex; align-items:center; gap:10px;
+  background:var(--ink); color:var(--bg);
+  border:none; border-radius:999px; padding:13px 19px 13px 16px;
+  cursor:pointer; box-shadow:0 14px 34px -12px rgba(0,0,0,.5);
+  font-family:"IBM Plex Sans", system-ui, sans-serif;
+  font-size:14px; font-weight:500;
+  transition:transform .18s ease;
+}
+#floatBtn:hover{ transform:translateY(-3px); }
+#floatBtn .gico{
+  width:30px; height:30px; border-radius:7px;
+  background:var(--accent); display:grid; place-items:center; flex:none;
+}
+#floatBtn .gico svg{ width:17px; height:17px; }
+
+/* ---------------- inline trigger ---------------- */
+.inline-try{
+  display:inline-flex; align-items:center; gap:8px;
+  background:var(--ink); color:var(--bg);
+  border:none; border-radius:999px;
+  padding:9px 16px 9px 14px;
+  font-family:"IBM Plex Sans", system-ui, sans-serif;
+  font-size:13px; font-weight:500;
+  cursor:pointer;
+  transition:transform .15s ease;
+}
+.inline-try:hover{ transform:translateY(-1px); }
+.inline-try .dot{
+  width:7px; height:7px; border-radius:50%; background:var(--accent);
+}
+
+/* ---------------- radiate panel ---------------- */
+#panel{
+  position:fixed; inset:0; width:100vw; height:100vh; z-index:60;
+  background:var(--surface);
+  display:flex; flex-direction:column; overflow:hidden;
+  clip-path:circle(0px at var(--cx,100%) var(--cy,100%));
+  transition:clip-path var(--reveal-dur) var(--soft-ease);
+  will-change:clip-path;
+}
+body.open #panel{ clip-path:circle(150% at var(--cx,100%) var(--cy,100%)); }
+
+.panel-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 22px; border-bottom:1px solid var(--line); flex:none;
+}
+.panel-head .ph-title{ display:flex; align-items:center; gap:11px; }
+.panel-head .ph-title .dot{ width:9px; height:9px; border-radius:50%; background:var(--accent); }
+.panel-head h2{ font-family:"IBM Plex Mono",monospace; font-size:13px; letter-spacing:.04em; text-transform:uppercase; margin:0; font-weight:600; }
+.panel-close{
+  width:34px; height:34px; border-radius:9px;
+  border:1px solid var(--line-2); background:var(--surface); color:var(--ink-soft);
+  cursor:pointer; display:grid; place-items:center;
+  transition:background .15s ease, color .15s ease;
+}
+.panel-close:hover{ background:var(--surface-2); color:var(--ink); }
+.panel-body{ flex:1; overflow-y:auto; padding:26px; max-width:760px; margin:0 auto; width:100%; }
+
+/* ---------------- the toy ---------------- */
+.toy{ display:flex; flex-direction:column; gap:18px; }
+.toy-top{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+.toy-top .mono{ margin:0; }
+.model-select{ position:relative; }
+.model-select select{
+  appearance:none; -webkit-appearance:none;
+  font-family:"IBM Plex Mono",monospace; font-size:12px;
+  background:var(--surface-2); color:var(--ink);
+  border:1px solid var(--line-2); border-radius:9px;
+  padding:8px 32px 8px 12px; cursor:pointer;
+}
+.model-select::after{ content:"▾"; position:absolute; right:12px; top:50%; transform:translateY(-50%); pointer-events:none; color:var(--muted); font-size:11px; }
+.toy-main{ display:flex; gap:18px; align-items:stretch; flex-wrap:wrap; }
+.canvas-wrap{
+  position:relative; flex:none; width:240px; height:240px;
+  border-radius:14px; overflow:hidden; border:1px solid var(--line-2); background:#0d0e11;
+}
+#pad{ display:block; width:100%; height:100%; cursor:crosshair; touch-action:none; }
+.canvas-grid{
+  position:absolute; inset:0; pointer-events:none;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 29px, rgba(255,255,255,.04) 29px 30px),
+    repeating-linear-gradient(90deg, transparent 0 29px, rgba(255,255,255,.04) 29px 30px);
+}
+.canvas-hint{
+  position:absolute; inset:0; display:grid; place-items:center;
+  color:rgba(255,255,255,.32); font-size:13px; pointer-events:none;
+  font-family:"IBM Plex Mono",monospace; letter-spacing:.05em; transition:opacity .2s ease;
+}
+.preds{ flex:1; min-width:180px; display:flex; flex-direction:column; gap:7px; }
+.pred{ display:grid; grid-template-columns:18px 1fr auto; align-items:center; gap:9px; }
+.pred .dnum{ font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--ink-soft); text-align:center; }
+.pred .bar{ height:9px; border-radius:5px; background:var(--surface-2); overflow:hidden; }
+.pred .bar i{ display:block; height:100%; width:0%; background:var(--line-2); border-radius:5px; transition:width .5s var(--reveal-ease), background .3s ease; }
+.pred .pct{ font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted); min-width:34px; text-align:right; }
+.pred.top .bar i{ background:var(--accent); }
+.pred.top .dnum{ color:var(--accent); font-weight:600; }
+.pred.top .pct{ color:var(--accent); }
+.toy-foot{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.verdict{ font-size:14px; color:var(--ink-soft); font-family:"IBM Plex Sans", system-ui, sans-serif; }
+.verdict b{ font-family:"Source Serif 4",serif; font-size:30px; color:var(--ink); margin-right:7px; }
+.clear-btn{
+  background:var(--surface-2); border:1px solid var(--line-2); color:var(--ink-soft);
+  border-radius:9px; padding:9px 15px; cursor:pointer;
+  font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase;
+  transition:background .15s ease;
+}
+.clear-btn:hover{ background:var(--line); }
+.toy-note{ font-size:12px; color:var(--muted); border-top:1px dashed var(--line-2); padding-top:14px; font-family:"IBM Plex Sans", system-ui, sans-serif; }
+
+/* ---------------- reconstructions gallery ---------------- */
+.gallery-block{ margin-top:8px; border-top:1px dashed var(--line-2); padding-top:18px; }
+.gallery-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.gallery-controls{ display:flex; align-items:center; gap:14px; }
+.gal-toggle{ display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none;
+  font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--muted); }
+.gal-toggle input{ accent-color:var(--accent); cursor:pointer; }
+.gal-toggle:hover{ color:var(--ink); }
+.gallery-note{ font-size:12.5px; color:var(--muted); margin:10px 0 14px; font-family:"IBM Plex Sans", system-ui, sans-serif; }
+.gallery{ display:flex; flex-direction:column; gap:6px; max-height:340px; overflow-y:auto; padding:10px; border:1px solid var(--line); border-radius:10px; background:#0d0e11; }
+.gal-row{ display:flex; align-items:center; gap:6px; }
+.gal-lab{ font-family:"IBM Plex Mono",monospace; font-size:10px; color:rgba(255,255,255,.4); width:30px; flex:none; text-align:right; }
+.gal-cell{ flex:none; border-radius:3px; image-rendering:pixelated; background-repeat:no-repeat; outline:1px solid rgba(255,255,255,.05); }
+.gal-cell:hover{ outline:1px solid var(--accent); }
+.gal-loading{ color:rgba(255,255,255,.45); font-family:"IBM Plex Mono",monospace; font-size:12px; padding:18px; }
+
+/* ---------------- scroll progress bar ---------------- */
+#progress{
+  position:fixed; top:0; left:0; height:3px; width:0%; z-index:80;
+  background:var(--accent);
+  transition:width .08s linear;
+}
+
+/* ---------------- sticky mini TOC ---------------- */
+#toc{
+  position:fixed; top:50%; transform:translateY(-50%);
+  left:max(24px, calc(50vw - var(--maxread)/2 - 230px));
+  width:190px; z-index:40;
+  font-family:"IBM Plex Sans", system-ui, sans-serif;
+}
+#toc .toc-label{
+  font-family:"IBM Plex Mono", monospace; font-size:10px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--muted); margin-bottom:14px; padding-left:13px;
+}
+#toc ol{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:3px; }
+#toc a{
+  display:block; padding:5px 0 5px 13px; border-left:2px solid var(--line);
+  color:var(--muted); text-decoration:none; font-size:13px; line-height:1.35;
+  transition:color .2s ease, border-color .2s ease;
+}
+#toc a:hover{ color:var(--ink-soft); }
+#toc a.active{ color:var(--ink); border-left-color:var(--accent); font-weight:600; }
+#toc a .toc-ix{ font-family:"IBM Plex Mono", monospace; font-size:11px; color:var(--muted); margin-right:7px; }
+#toc a.active .toc-ix{ color:var(--accent); }
+
+/* ---------------- glossary terms ---------------- */
+.term{
+  border-bottom:1px dashed var(--line-2);
+  cursor:help; position:relative; color:var(--ink);
+}
+.term:focus{ outline:none; }
+.term::after{
+  content:attr(data-def);
+  position:absolute; left:50%; bottom:calc(100% + 10px); transform:translateX(-50%) translateY(4px);
+  width:260px; max-width:64vw; z-index:70;
+  background:var(--ink); color:var(--surface);
+  font-family:"IBM Plex Sans", system-ui, sans-serif; font-weight:400;
+  font-size:13px; line-height:1.5; letter-spacing:0; text-transform:none;
+  padding:11px 13px; border-radius:9px;
+  box-shadow:0 14px 34px -14px rgba(0,0,0,.55);
+  opacity:0; pointer-events:none;
+  transition:opacity .16s ease, transform .16s var(--soft-ease);
+}
+.term::before{
+  content:""; position:absolute; left:50%; bottom:calc(100% + 4px); transform:translateX(-50%) translateY(4px);
+  border:6px solid transparent; border-top-color:var(--ink);
+  opacity:0; z-index:71; transition:opacity .16s ease, transform .16s var(--soft-ease);
+}
+.term:hover::after, .term:focus::after,
+.term:hover::before, .term:focus::before{
+  opacity:1; transform:translateX(-50%) translateY(0);
+}
+
+/* ---------------- Tufte-style sidenotes ---------------- */
+.sn-ref{
+  font-family:"IBM Plex Mono", monospace; font-size:11px;
+  color:var(--accent); cursor:default; vertical-align:super; line-height:0;
+  padding:0 1px;
+}
+.sidenote{
+  float:right; clear:right;
+  width:210px; margin-right:-242px; margin-top:4px; margin-bottom:18px;
+  font-family:"IBM Plex Sans", system-ui, sans-serif;
+  font-size:13px; line-height:1.5; color:var(--ink-soft);
+  border-left:2px solid var(--accent); padding-left:13px;
+  text-wrap:pretty;
+}
+.sidenote .sn-num{
+  font-family:"IBM Plex Mono", monospace; font-size:11px; color:var(--accent); margin-right:6px;
+}
+
+/* equation block */
+.eq{ margin:26px 0 28px; padding:6px 0; overflow-x:auto; }
+.eq .katex{ font-size:1.05em; }
+
+@media (max-width:1180px){
+  #toc{ display:none; }
+  .sidenote{
+    float:none; clear:none; width:auto;
+    margin:14px 0 18px; border-left-width:3px; padding-left:14px;
+    background:var(--surface); border-radius:0 8px 8px 0; padding:12px 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce){
+  #panel{ transition-duration:.001ms; }
+  figure.fig{ transition:none; opacity:1; transform:none; }
+  #progress{ transition:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============== READING AIDS ============== -->
+<div id="progress" aria-hidden="true"></div>
+
+<nav id="toc" aria-label="Table of contents">
+  <div class="toc-label">Contents</div>
+  <ol>
+    <li><a href="#sec-how"><span class="toc-ix">01</span>How it works</a></li>
+    <li><a href="#sec-tested"><span class="toc-ix">02</span>How it was tested</a></li>
+    <li><a href="#sec-results"><span class="toc-ix">03</span>How it does</a></li>
+    <li><a href="#sec-closing"><span class="toc-ix">04</span>Closing thoughts</a></li>
+  </ol>
+</nav>
+
+<!-- ============== ARTICLE ============== -->
+<article class="article">
+  <h1 class="title">Principal vector networks: simplifying the values of neurons</h1>
+  <div class="byline">
+    <span class="mono">12 min read</span>
+    <span class="rule"></span>
+    <span class="mono">Mechanistic Interpretability · MNIST / EMNIST</span>
+  </div>
+
+  <div class="authorline">
+    <span class="by">By</span>
+    <span class="author" tabindex="0" aria-label="Author contact info">
+      <span class="ico"></span>Keegan Freyhof
+      <span class="contact" role="tooltip">
+        <div class="cname">Keegan Freyhof</div>
+        <div class="crole">Author · Researcher</div>
+        <a href="mailto:keeganfreyhof@gmail.com">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          keeganfreyhof@gmail.com
+        </a>
+      </span>
+    </span>
+  </div>
+
+  <p>When trying to determine how a neural network works internally, one of the most daunting challenges is overcoming the range of values that a neuron can have and how often it takes them. The following method aims to simplify this continuum to a few distinct activation patterns per neuron, and in the process get an idea of what these activations represent.</p>
+  
+  <figure class="recon-fig">
+    <div class="recon-pair">
+      <div class="recon-item">
+        <img src="mnist_reconstructed_principals.png" alt="A grid of reconstructed input patterns for a first-layer neuron in an MNIST-trained model, each resembling a handwritten digit.">
+        <span class="recon-label">MNIST</span>
+      </div>
+      <div class="recon-item">
+        <img src="emnist_reconstructed_principals.png" alt="A grid of reconstructed input patterns for a first-layer neuron in an EMNIST-balanced-trained model, each resembling a handwritten digit or letter.">
+        <span class="recon-label">EMNIST-balanced</span>
+      </div>
+    </div>
+    <figcaption>Reconstructions of inputs that provide the activation patterns for a neuron in the first layer of models trained on the MNIST and EMNIST-balanced datasets.</figcaption>
+  </figure>
+
+  <p>This method derives these patterns from the training data and network and provides a drop-in for neurons in trained models. Base model test set performance is also generally preserved - with differences in performance hinging mainly on task difficulty. What follows is how the neuron simplification is done, what impacts the test set performance of the simplification and what the resulting patterns might reveal about the model's internals.</p>
+
+  <h2 id="sec-how"><span class="h2-ix">01</span>So how does it work?</h2>
+
+  <p>In a typical linear layer, the activation for a single neuron is
+    \(y_{n}^{l} = \sigma\!\left(W_{n}\cdot x^{l-1} + b_{n}\right)\),
+    where \(y_{n}^{l}\) is the scalar activation for neuron \(n\) in layer \(l\),
+    \(\sigma\) is the activation function (ReLU, SiLU, …), \(W_{n}\) is the neuron's
+    weight vector, \(b_{n}\) its bias, and \(x^{l-1}\) the previous layer's activations.
+    A principal-vector neuron instead takes the
+    <span class="term" tabindex="0" data-def="The element-wise product of two vectors — here, the neuron's weights multiplied entry-by-entry with the incoming activations.">Hadamard product</span>
+    of the weights and inputs, then compares it — by
+    <span class="term" tabindex="0" data-def="A similarity measure equal to the cosine of the angle between two vectors; 1 means identical direction, 0 means orthogonal.">cosine similarity</span>
+    — against a small set of pre-computed
+    <span class="term" tabindex="0" data-def="A representative vector synthesized to maximize cosine similarity to every member of a group of recorded Hadamard-product vectors.">principal vectors</span>.
+    The nearest one is substituted in, and the activation proceeds as normal.</p>
+
+  <div class="eq">$$y_{n}^{l} \;=\; \sigma\!\left(W_{n}\cdot x^{l-1} + b_{n}\right)
+    \quad\longrightarrow\quad
+    \sigma\!\left(\operatorname*{arg\,max}_{p\,\in\,P_n}\;
+    \cos\!\big(W_{n}\odot x^{l-1},\, p\big) + b_{n}\right)$$</div>
+
+  <p>To derive the vectors, a model is trained and frozen, then run over the training
+    set again while every neuron's Hadamard product is recorded. For each neuron, those
+    vectors are connected into a
+    <span class="term" tabindex="0" data-def="k-nearest-neighbors graph: each recorded vector is linked to its k most cosine-similar neighbors, forming a graph that can then be clustered.">kNN graph</span>
+    and clustered — either into a fixed number of groups or automatically via the
+    <span class="term" tabindex="0" data-def="A community-detection algorithm that finds clusters in a graph by greedily maximizing modularity; here it picks the number of groups automatically, usually 15–25.">Louvain method</span>
+    — and each cluster yields one principal vector.</p>
+
+  <div class="method-card">
+    <div class="ml">Figure · Method diagram</div>
+    <img class="schematic" src="schematic.png" alt="Schematic of principal-vector substitution: the neuron weight vector W is Hadamard-multiplied with the input x to form Im, compared against the matrix of principal vectors P to produce a similarity-score vector s, and the highest-scoring principal vector is summed and added to the bias b to give the activation y.">
+    <div class="mcap">The neuron's Hadamard product \(W\odot x\) is scored by cosine similarity against the matrix of principal vectors; the best match is summed and added to the bias to give the activation.</div>
+  </div>
+
+  <p>Note that the principal networks do take a good bit longer to run and take more space in memory, as the steps added to the per-neuron process are less parallelizable compared to the linear layer and scale in memory by both the number of neurons in the previous layer and the number of principal vector groups.</p>
+
+  <h2 id="sec-tested"><span class="h2-ix">02</span>How were these networks tested?</h2>
+  <p>Each model is trained as a standard fully-connected network on MNIST or EMNIST-balanced.<span class="sn-ref">1</span><span class="sidenote"><span class="sn-num">1</span>Two depths are used throughout: <em>shallow</em> = <code>128 → 64 → 10/47</code> and <em>deep</em> = <code>128 → 128 → 64 → 64 → 10/47</code>.</span> Once trained, individual neurons (or whole layers) are swapped out for their principal-vector equivalent and the network is re-evaluated on the held-out test set.<span class="sn-ref">2</span><span class="sidenote"><span class="sn-num">2</span>Every result is averaged over seven initialization seeds — 5, 67, 1032, 1362, 2721, 3693, 5241 — which is what the error bands and bars in the figures show.</span> The baseline is always the unmodified, all-linear network.</p>
+
+  <h2 id="sec-results"><span class="h2-ix">03</span>How do the networks do?</h2>
+
+  <figure class="fig"><div class="chart-host" id="fig1"></div>
+    <figcaption><b>Figure 1</b>Test set accuracy for MNIST and EMNIST-balanced models with 20 groups.</figcaption></figure>
+
+  <figure class="fig"><div class="chart-host" id="fig2"></div>
+    <figcaption><b>Figure 2</b>Chart of the test set accuracy for the shallow MNIST model as more linear neurons are substituted for principal ones. Normalized to base model score.</figcaption></figure>
+
+  <figure class="fig"><div class="chart-host" id="fig3"></div>
+    <figcaption><b>Figure 3</b>The difference between accuracy for a shallow EMNIST-balanced network and its principal counterpart as the subset of EMNIST-balanced labels need to be predicted increases.</figcaption></figure>
+
+  <figure class="fig"><div class="chart-host" id="fig4"></div>
+    <figcaption><b>Figure 4</b>The difference between accuracy for a deep EMNIST-balanced network and its principal counterpart as the subset of EMNIST-balanced labels need to be predicted increases.</figcaption></figure>
+
+  <p>As shown previously, for single-neuron principal vector substitution, performance decreases as more neurons are converted to principal vector substitutions. For patterns involving substituting all of the layers, models seem to degrade in ability when the number of classes the network needs to predict increases. Conversely, model performance seems to improve as models get both deeper. These data points seem to suggest that the principal model performance is subject to not only architecture but also the number of neurons compared to the number of predictions that the network needs to make.</p>
+
+  <figure class="fig"><div class="chart-host" id="fig5a"></div>
+    <figcaption><b>Figure 5a</b>Per-layer substitution for the <em>shallow MNIST</em> models, all four regularization variants overlaid (solid = single, dashed = prefix).</figcaption></figure>
+
+  <figure class="fig"><div class="chart-host" id="fig5b"></div>
+    <figcaption><b>Figure 5b</b>Per-layer substitution for the <em>deep MNIST</em> models, all four regularization variants overlaid (solid = single, dashed = prefix).</figcaption></figure>
+
+  <figure class="fig"><div class="chart-host" id="fig5c"></div>
+    <figcaption><b>Figure 5c</b>Per-layer substitution for the <em>shallow EMNIST-balanced</em> models, all four regularization variants overlaid (solid = single, dashed = prefix).</figcaption></figure>
+
+  <figure class="fig"><div class="chart-host" id="fig5d"></div>
+    <figcaption><b>Figure 5d</b>Per-layer substitution for the <em>deep EMNIST-balanced</em> models, all four regularization variants overlaid (solid = single, dashed = prefix).</figcaption></figure>
+
+  <p>The same per-layer substitution sweep is broken out below for each model family. Every chart overlays all four regularization variants &mdash; <em>plain</em>, <em>layernorm</em>, <em>dropout</em>, and <em>ln+dropout</em> &mdash; with the solid line for <em>single</em>-layer substitution and the dashed line for <em>prefix</em> (cumulative) substitution. Each variant is one color, so single/prefix pairs share a hue.</p>
+
+  <p>For patterns involving single layer substitutions, the results are more nuanced. Models seem to be bottlenecked by principal layers, as performance does typically decrease when substituting back in principal layers. Notably, substituting in the first layer seems to have a dramatic negative impact while later layers can have less to no negative performance difference. This seems to indicate that some layers are more amenable to being represented in this way, and for the MNIST models it may be likely that this is what they are doing for the later layers in the network. Another behavior that the principal model exhibits is performance differences when varying training duration of the linear model.</p>
+  
+  <figure class="fig"><div class="chart-host" id="fig6a"></div>
+    <figcaption><b>Figure 6a</b>Training-duration sweep for the <em>shallow MNIST</em> models, all four regularization variants overlaid (solid = principal, dashed = linear baseline).</figcaption></figure>
+
+  <figure class="fig"><div class="chart-host" id="fig6b"></div>
+    <figcaption><b>Figure 6b</b>Training-duration sweep for the <em>deep MNIST</em> models, all four regularization variants overlaid (solid = principal, dashed = linear baseline).</figcaption></figure>
+
+  <figure class="fig"><div class="chart-host" id="fig6c"></div>
+    <figcaption><b>Figure 6c</b>Training-duration sweep for the <em>shallow EMNIST-balanced</em> models, all four regularization variants overlaid (solid = principal, dashed = linear baseline).</figcaption></figure>
+
+  <figure class="fig"><div class="chart-host" id="fig6d"></div>
+    <figcaption><b>Figure 6d</b>Training-duration sweep for the <em>deep EMNIST-balanced</em> models, all four regularization variants overlaid (solid = principal, dashed = linear baseline).</figcaption></figure>
+
+  <p>The training-duration sweep is broken out below for each model family. Every chart overlays all four regularization variants &mdash; <em>plain</em>, <em>layernorm</em>, <em>dropout</em>, and <em>ln+dropout</em> &mdash; with the solid line for the <em>principal</em> model (all hidden layers substituted) and the dashed line for the <em>linear</em> baseline. Each variant is one color, so principal/linear pairs share a hue.</p>
+
+
+  <p>It is unclear why there is a loss in performance as the models are trained for longer. This seems to corroborate findings that as a model is trained for longer it tends to drop the use of pattern matching to solve tasks. Likewise, it seems to imply that the principal vector representation captures some of the early stage memorization that the model does. It also seems to be the case that across the board optimization pressures do not fine tune for pattern matching. The one last thing that can be fine tuned though is the number of groups in a principal vector model.</p>
+
+  <figure class="fig"><div class="chart-host" id="fig7a"></div>
+    <figcaption><b>Figure 7a</b>Group-count sweep (K = 1&ndash;20) for the <em>shallow MNIST</em> models, all four regularization variants overlaid (solid = principal, dashed = linear baseline).</figcaption></figure>
+
+  <figure class="fig"><div class="chart-host" id="fig7b"></div>
+    <figcaption><b>Figure 7b</b>Group-count sweep (K = 1&ndash;20) for the <em>deep MNIST</em> models, all four regularization variants overlaid (solid = principal, dashed = linear baseline).</figcaption></figure>
+
+  <figure class="fig"><div class="chart-host" id="fig7c"></div>
+    <figcaption><b>Figure 7c</b>Group-count sweep (K = 1&ndash;20) for the <em>shallow EMNIST-balanced</em> models, all four regularization variants overlaid (solid = principal, dashed = linear baseline).</figcaption></figure>
+
+  <figure class="fig"><div class="chart-host" id="fig7d"></div>
+    <figcaption><b>Figure 7d</b>Group-count sweep (K = 1&ndash;20) for the <em>deep EMNIST-balanced</em> models, all four regularization variants overlaid (solid = principal, dashed = linear baseline).</figcaption></figure>
+
+  <p>The group-count sweep is broken out below for each model family. Every chart overlays all four regularization variants &mdash; <em>plain</em>, <em>layernorm</em>, <em>dropout</em>, and <em>ln+dropout</em> &mdash; with the solid line for the <em>principal</em> model and the dashed (flat) line for the <em>linear</em> baseline. Each variant is one color, so principal/linear pairs share a hue.</p>
+
+  <figure class="fig"><div class="chart-host" id="fig8"></div>
+    <figcaption><b>Figure 8</b>Principal model performance as the number of groups is increased beyond 20 for MNIST models.</figcaption></figure>
+
+  <figure class="fig"><div class="chart-host" id="fig9"></div>
+    <figcaption><b>Figure 9</b>Principal model performance as the number of groups is increased beyond 20 for EMNIST models.</figcaption></figure>
+
+  <p>Interestingly, the number of groups needed for better performance on EMNIST-balanced seems to go beyond what MNIST saturates at - as seen by performance increasing up to 100 groups - although this does not get EMNIST-balanced test accuracy to parity with the MNIST based principal networks. The emergence of layer norm as the most performant architecture is also interesting as this does not emerge until a larger number of groups are picked, as well as only on the MNIST model. However, the higher number of groups does not reverse the trend of performance decreasing with epochs. More work would need to be done to get a better idea of what is lost, what the accuracy is traded for and why this trade occurs as models are trained for longer.</p>
+
+  <h2 id="sec-closing"><span class="h2-ix">04</span>Closing thoughts</h2>
+  <p>Looking at the data suggests that principal vectors are a good way of simplifying the choices that a model can make for a given neuron without substantially diminishing the performance of a network. It is unclear how much interpretability beyond this simplification of activations and their representations that principal vectors give, as it is hard to determine what the principal vectors for layers beyond the first layer represent. Because all of the input activations for the layer can be reconstructed from a principal vector, it is trivial to reconstruct what the first layer’s principal vectors represent - this is typically a number/letter with a particular feature or rarely an amalgamation of numbers and letters. For layers further into the network, it becomes less clear what the principal vectors represent due to matrices having a many-to-one mapping; there are many inputs that could theoretically give a valid input to the layer that the principal vector can reconstruct. More work would need to be done to see how much the network uses the null space and the zeroed out space given by the activation to do many-to-one mappings. Likewise, being able to reconstruct the valid space of input vectors for a given layer could also help determine what is a valid input that might have produced a principal vector and what might not have been, allowing for reconstructing the patterns that principal vectors in later layers of the network are representing.</p>
+  
+  <p>Overall, being able to simplify the network activations may be promising for getting an idea of how the model works through the pattern matching method that principal vector networks illustrate as well as potentially pointing to where the algorithmic parts of the network may reside in the gap between the linear layer network and the principal network.</p>
+
+  <p>Thanks for reading this far and if you have any comments or critiques, feel free to reach out at <a href="mailto:keeganfreyhof@gmail.com">keeganfreyhof@gmail.com</a>.</p>
+  
+  <p style="margin-top:30px">
+    <button class="inline-try" data-open>
+      <span class="dot"></span>Try the models and view some of the principal vectors
+    </button>
+  </p>
+
+  <footer class="colophon">
+    <svg class="cstar" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c.5 4.7 4.3 8.5 9 9-4.7.5-8.5 4.3-9 9-.5-4.7-4.3-8.5-9-9 4.7-.5 8.5-4.3 9-9z"/></svg>
+    <span>Design and interactive figures built with <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude</a>.</span>
+  </footer>
+</article>
+
+<!-- ============== FLOATING TRIGGER ============== -->
+<button id="floatBtn" data-open aria-label="Open interactive model panel">
+  <span class="gico">
+    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><circle cx="11" cy="11" r="2"/></svg>
+  </span>
+  Try the models
+</button>
+
+<!-- ============== RADIATE PANEL ============== -->
+<section id="panel" role="dialog" aria-modal="true" aria-label="Digit recognizer">
+  <header class="panel-head">
+    <div class="ph-title"><span class="dot"></span><h2>Principal vector playground</h2></div>
+    <button class="panel-close" id="panelClose" aria-label="Close panel">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </header>
+  <div class="panel-body">
+    <div class="toy">
+      <div class="toy-top">
+        <span class="mono">Draw a character · pick a model</span>
+        <div class="model-select">
+          <select id="modelSel">
+            <option value="linear-mnist">Linear baseline · MNIST</option>
+            <option value="principal-mnist">Principal (k=100) · MNIST</option>
+            <option value="linear-emnist">Linear baseline · EMNIST-bal</option>
+            <option value="principal-emnist">Principal (k=100) · EMNIST-bal</option>
+          </select>
+        </div>
+      </div>
+      <div class="toy-main">
+        <div class="canvas-wrap">
+          <canvas id="pad" width="240" height="240"></canvas>
+          <div class="canvas-grid"></div>
+          <div class="canvas-hint" id="padHint">draw a character</div>
+        </div>
+        <div class="preds" id="preds"></div>
+      </div>
+      <div class="toy-foot">
+        <div class="verdict" id="verdict"><b>—</b>draw a character to begin</div>
+        <button class="clear-btn" id="clearBtn">Clear</button>
+      </div>
+      <p class="toy-note">Real inference runs entirely in your browser. The drawing is downsampled to 28×28 and MNIST-centered, then fed through the trained network from <code>models/</code>. The principal models snap each neuron's contribution to its nearest precomputed principal vector before the activation proceeds — the k=100 principal blob (~13&nbsp;MB) loads on first use.</p>
+
+      <!-- ---- reconstructions gallery ---- -->
+      <div class="gallery-block">
+        <div class="gallery-head">
+          <span class="mono">Layer-0 principal vectors, reconstructed as images</span>
+          <div class="gallery-controls">
+            <label class="gal-toggle" title="Divide each principal vector by the neuron's weight row, elementwise — recovering the implied input pattern x from the contribution W⊙x.">
+              <input type="checkbox" id="galDivide"><span>÷ weights</span>
+            </label>
+            <div class="model-select">
+              <select id="gallerySel">
+                <option value="mnist">MNIST model</option>
+                <option value="emnist">EMNIST-bal model</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <p class="gallery-note" id="galleryNote">Because the first hidden layer reads raw pixels, each of its principal vectors is itself a point in image space. Each row is one neuron; each tile is one of the distinct activation patterns that neuron was simplified down to.</p>
+        <div class="gallery" id="gallery"><div class="gal-loading">open to load reconstructions…</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== SCRIPTS ============== -->
+<script src="instrument-chart.js"></script>
+<script src="pv-infer.js"></script>
+<script src="radiate-reveal.js"></script>
+<script>
+/* ============================================================
+   Each figure is one fetch from data/figN.json. To update a
+   chart, edit its JSON file — no code change needed.
+
+   JSON shape (matches InstrumentChart options):
+     { xLabel, yLabel, xDomain:[lo,hi], yDomain:[lo,hi],
+       type?: 'bar',              // grouped bars instead of lines
+       integerX?: true,           // round x-tick labels to ints
+       xTickLabels?: [strings],   // categorical x axis
+       series: [ { name, color, dash,
+                   points:[{x, y, e?}, ...] } ] }   // e = ±1σ error
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var FIGS = ['fig1','fig2','fig3','fig4','fig5','fig5a','fig5b','fig5c','fig5d','fig6','fig6a','fig6b','fig6c','fig6d','fig7','fig7a','fig7b','fig7c','fig7d','fig8','fig9'];
+
+  function buildTheme(cfg){
+    var theme = {};
+    if (cfg.integerX) theme.fmtX = function(v){ return Math.round(v) + ''; };
+    if (cfg.xTickLabels){
+      var labels = cfg.xTickLabels;
+      theme.fmtX = function(v){ var i = Math.round(v); return labels[i] || ''; };
+    }
+    theme.fmtY = function(v){ return Math.round(v) + ''; };
+    return theme;
+  }
+
+  FIGS.forEach(function(id){
+    fetch('data/' + id + '.json')
+      .then(function(r){ if (!r.ok) throw new Error(id + ' fetch failed'); return r.json(); })
+      .then(function(cfg){
+        new InstrumentChart('#' + id, {
+          xLabel: cfg.xLabel, yLabel: cfg.yLabel,
+          xDomain: cfg.xDomain, yDomain: cfg.yDomain,
+          type: cfg.type || 'line',
+          theme: buildTheme(cfg),
+          series: cfg.series
+        });
+      })
+      .catch(function(err){
+        var host = document.getElementById(id);
+        if (host) host.innerHTML = '<div style="padding:18px;font-family:IBM Plex Mono,monospace;font-size:12px;color:#8a8d96">could not load ' + id + '.json — ' + err.message + '</div>';
+      });
+  });
+
+  /* Reveal-on-scroll for figures */
+  if ('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+    document.querySelectorAll('figure.fig').forEach(function(f){ io.observe(f); });
+  } else {
+    document.querySelectorAll('figure.fig').forEach(function(f){ f.classList.add('in'); });
+  }
+
+  /* ---- scroll progress bar ---- */
+  var bar = document.getElementById('progress');
+  function updateProgress(){
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop || document.body.scrollTop) / max * 100 : 0;
+    bar.style.width = pct + '%';
+  }
+  window.addEventListener('scroll', updateProgress, { passive:true });
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---- TOC active-section highlighting ---- */
+  var tocLinks = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  var sections = tocLinks.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  if ('IntersectionObserver' in window && sections.every(Boolean)){
+    var visible = {};
+    var so = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.boundingClientRect.top : null; });
+      var current = null;
+      sections.forEach(function(sec){
+        if (sec.getBoundingClientRect().top - 90 <= 0) current = sec.id;
+      });
+      tocLinks.forEach(function(a){
+        a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+      });
+    }, { rootMargin: '-80px 0px -70% 0px', threshold: [0, 1] });
+    sections.forEach(function(s){ so.observe(s); });
+  }
+
+  /* smooth-scroll for TOC clicks */
+  tocLinks.forEach(function(a){
+    a.addEventListener('click', function(e){
+      var t = document.querySelector(a.getAttribute('href'));
+      if (t){ e.preventDefault(); t.scrollIntoView({ behavior:'smooth', block:'start' }); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

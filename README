@@ -1,0 +1,5 @@
+HTML server can be run with:
+python -m http.server 8765 --directory principal_vectors/web
+
+It can then be accessed in a web browser with:
+http://localhost:8765
