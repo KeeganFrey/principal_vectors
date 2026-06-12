@@ -1,0 +1,76 @@
+{
+  "checkpoint": "group_of_7\\emnist_deep_ln_drop\\seed3693\\epoch10.safetensors",
+  "config": {
+    "dataset": "emnist",
+    "arch": "deep",
+    "architecture": "784-128-128-64-64-47",
+    "config": "ln_drop",
+    "use_layer_norm": true,
+    "use_dropout": true,
+    "dropout_p": 0.2,
+    "seed": 3693,
+    "epochs": 200,
+    "save_epochs": [
+      10,
+      25,
+      50,
+      75,
+      100,
+      150,
+      200
+    ],
+    "batch_size": 128,
+    "learning_rate": 0.001,
+    "optimizer": "Adam",
+    "scheduler": "CosineAnnealingLR(T_max=200)",
+    "criterion": "CrossEntropyLoss",
+    "activation": "ReLU",
+    "num_classes": 47,
+    "num_parameters": 133231,
+    "training_mode": "vmap_group",
+    "group_seeds": [
+      5241,
+      2721,
+      1362,
+      1032,
+      3693
+    ]
+  },
+  "num_samples": 200000,
+  "dendrogram_samples": 10000,
+  "cluster_method": "hierarchical",
+  "linkage_method": "average",
+  "metric": "cosine",
+  "pv_method": "mean",
+  "save_groupings": false,
+  "n_layers": 5,
+  "layer_shapes": [
+    [
+      128,
+      112800,
+      784
+    ],
+    [
+      128,
+      112800,
+      128
+    ],
+    [
+      64,
+      112800,
+      128
+    ],
+    [
+      64,
+      112800,
+      64
+    ],
+    [
+      47,
+      112800,
+      64
+    ]
+  ],
+  "n_neurons": 431,
+  "num_clusters": 100
+}

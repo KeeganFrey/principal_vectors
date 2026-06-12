@@ -1,0 +1,36 @@
+{
+  "dataset": "emnist",
+  "arch": "deep",
+  "architecture": "784-128-128-64-64-47",
+  "config": "ln_drop",
+  "use_layer_norm": true,
+  "use_dropout": true,
+  "dropout_p": 0.2,
+  "seed": 3693,
+  "epochs": 200,
+  "save_epochs": [
+    10,
+    25,
+    50,
+    75,
+    100,
+    150,
+    200
+  ],
+  "batch_size": 128,
+  "learning_rate": 0.001,
+  "optimizer": "Adam",
+  "scheduler": "CosineAnnealingLR(T_max=200)",
+  "criterion": "CrossEntropyLoss",
+  "activation": "ReLU",
+  "num_classes": 47,
+  "num_parameters": 133231,
+  "training_mode": "vmap_group",
+  "group_seeds": [
+    5241,
+    2721,
+    1362,
+    1032,
+    3693
+  ]
+}
