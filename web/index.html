@@ -569,8 +569,6 @@ body.open #panel{ clip-path:circle(150% at var(--cx,100%) var(--cy,100%)); }
   <figure class="fig"><div class="chart-host" id="fig5d"></div>
     <figcaption><b>Figure 5d</b>Per-layer substitution for the <em>deep EMNIST-balanced</em> models, all four regularization variants overlaid (solid = single, dashed = prefix).</figcaption></figure>
 
-  <p>The same per-layer substitution sweep is broken out below for each model family. Every chart overlays all four regularization variants &mdash; <em>plain</em>, <em>layernorm</em>, <em>dropout</em>, and <em>ln+dropout</em> &mdash; with the solid line for <em>single</em>-layer substitution and the dashed line for <em>prefix</em> (cumulative) substitution. Each variant is one color, so single/prefix pairs share a hue.</p>
-
   <p>For patterns involving single layer substitutions, the results are more nuanced. Models seem to be bottlenecked by principal layers, as performance does typically decrease when substituting back in principal layers. Notably, substituting in the first layer seems to have a dramatic negative impact while later layers can have less to no negative performance difference. This seems to indicate that some layers are more amenable to being represented in this way, and for the MNIST models it may be likely that this is what they are doing for the later layers in the network. Another behavior that the principal model exhibits is performance differences when varying training duration of the linear model.</p>
   
   <figure class="fig"><div class="chart-host" id="fig6a"></div>
@@ -585,9 +583,6 @@ body.open #panel{ clip-path:circle(150% at var(--cx,100%) var(--cy,100%)); }
   <figure class="fig"><div class="chart-host" id="fig6d"></div>
     <figcaption><b>Figure 6d</b>Training-duration sweep for the <em>deep EMNIST-balanced</em> models, all four regularization variants overlaid (solid = principal, dashed = linear baseline).</figcaption></figure>
 
-  <p>The training-duration sweep is broken out below for each model family. Every chart overlays all four regularization variants &mdash; <em>plain</em>, <em>layernorm</em>, <em>dropout</em>, and <em>ln+dropout</em> &mdash; with the solid line for the <em>principal</em> model (all hidden layers substituted) and the dashed line for the <em>linear</em> baseline. Each variant is one color, so principal/linear pairs share a hue.</p>
-
-
   <p>It is unclear why there is a loss in performance as the models are trained for longer. This seems to corroborate findings that as a model is trained for longer it tends to drop the use of pattern matching to solve tasks. Likewise, it seems to imply that the principal vector representation captures some of the early stage memorization that the model does. It also seems to be the case that across the board optimization pressures do not fine tune for pattern matching. The one last thing that can be fine tuned though is the number of groups in a principal vector model.</p>
 
   <figure class="fig"><div class="chart-host" id="fig7a"></div>
@@ -601,8 +596,6 @@ body.open #panel{ clip-path:circle(150% at var(--cx,100%) var(--cy,100%)); }
 
   <figure class="fig"><div class="chart-host" id="fig7d"></div>
     <figcaption><b>Figure 7d</b>Group-count sweep (K = 1&ndash;20) for the <em>deep EMNIST-balanced</em> models, all four regularization variants overlaid (solid = principal, dashed = linear baseline).</figcaption></figure>
-
-  <p>The group-count sweep is broken out below for each model family. Every chart overlays all four regularization variants &mdash; <em>plain</em>, <em>layernorm</em>, <em>dropout</em>, and <em>ln+dropout</em> &mdash; with the solid line for the <em>principal</em> model and the dashed (flat) line for the <em>linear</em> baseline. Each variant is one color, so principal/linear pairs share a hue.</p>
 
   <figure class="fig"><div class="chart-host" id="fig8"></div>
     <figcaption><b>Figure 8</b>Principal model performance as the number of groups is increased beyond 20 for MNIST models.</figcaption></figure>
